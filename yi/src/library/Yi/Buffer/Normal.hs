@@ -38,12 +38,13 @@ module Yi.Buffer.Normal (TextUnit(Character, Line, VLine, Document),
                          checkPeekB
                          , RegionStyle(..)
                          , mkRegionOfStyleB
+                         , readRegionOfStyleB
                          , unitWiseRegion
                          , extendRegionToBoundaries
                         , regionStyleA
                         ) where
 
-import Prelude(length, subtract)
+import Prelude(length, subtract, map, take, drop, lines, unlines)
 import Yi.Prelude
 import Yi.Buffer.Basic
 import Yi.Buffer.Misc
@@ -427,6 +428,21 @@ mkRegionOfStyleB start' stop' regionStyle =
      Inclusive -> inclusiveRegionB region
      Exclusive -> return region
      Block     -> return region
+
+-- | Read a Region of a particular RegionStyle.
+-- (Mainly to read 'Block' Regions which aren't supported by readRegionB.)
+readRegionOfStyleB :: RegionStyle -> Region -> BufferM String
+readRegionOfStyleB Block r = do
+    let (start, end) = (regionStart r, regionEnd r)
+    startCol <- colOf start
+    endCol <-colOf end
+    regionText <- readRegionB r
+    let regionLines = lines regionText
+    let width = endCol - startCol
+    let block = take width (head regionLines)
+              : map (take width . drop startCol) (tail regionLines)
+    return $ unlines block
+readRegionOfStyleB _     r = readRegionB r
 
 unitWiseRegion :: TextUnit -> Region -> BufferM Region
 unitWiseRegion unit = extendRegionToBoundaries unit InsideBound OutsideBound
