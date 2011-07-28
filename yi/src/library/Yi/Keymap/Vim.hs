@@ -926,7 +926,7 @@ defKeymap = Proto template
      -- | operator (i.e. movement-parameterised) actions
      operators :: [((String->String), (String->String), Char, (Int -> RegionStyle -> Region -> EditorM ()))]
      operators = [ (id, id, 'd', const $ \s r -> cutRegion s r >> withBuffer0 leftOnEol)
-                 , (id, id, 'y', const $ nonBlockRegion "y" yankRegion)
+                 , (id, id, 'y', const $ yankRegion)
                  , (id, id, '=', const $ mapRegions_ indentRegion)
                  , (id, id, '>', mapRegions_ . shiftIndentOfRegion)
                  , (id, id, '<', mapRegions_ . shiftIndentOfRegion . negate)
@@ -995,8 +995,7 @@ defKeymap = Proto template
      yankRegion :: RegionStyle -> Region -> EditorM ()
      yankRegion regionStyle region | regionIsEmpty region = return ()
                                    | otherwise            = do
-       when (regionStyle == Block) $ fail "yankRegion does not work on block regions"
-       txt <- withBuffer0' $ readRegionB region
+       txt <- withBuffer0' $ readRegionOfStyleB regionStyle region
        setRegE $ if regionStyle == LineWise then '\n':txt else txt
        let rowsYanked = length (filter (== '\n') txt)
        when (rowsYanked > 2) $ printMsg $ show rowsYanked ++ " lines yanked"
